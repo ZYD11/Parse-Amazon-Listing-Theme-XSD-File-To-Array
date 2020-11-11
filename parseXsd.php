@@ -1,5 +1,4 @@
 <?php
-header("Content-type: text/html; charset=utf-8");
 class parseXsd {
     public $base_elem_tag_elem = array(
     "simpleType",
@@ -90,7 +89,7 @@ class parseXsd {
 
     public $parseXsdXpath, $BaseXsdXpath;
 
-    public $productType, $productSubType, $ProductTypeSpecifics = array();
+    public $productType, $ProductTypeSpecifics = array();
 
     public $fileExt = ".xsd";
 
@@ -110,7 +109,6 @@ class parseXsd {
         $this->BaseXsdDoc->load($this->amazonBaseXsd);
         $this->BaseXsdXpath = new DOMXPath($this->BaseXsdDoc);
     }
-
 
     public function parseXsdParseData($AttrNodeName, $AttrNode){
         $attr_data = array();
@@ -179,7 +177,7 @@ class parseXsd {
     public function LocalXsdParseData($AttrNodeType, $AttrNodeName){
         $attr_data = array();
 
-        $baseNodeElem = $this->parseXsdParse('//'.$this->prefix.'complexType [@name="'.$AttrNodeType.'"]//*');
+        $baseNodeElem = $this->parseXsdParse('//'.$this->prefix.'complexType [@name="'.$AttrNodeType.'"]/*');
 
         if (!$baseNodeElem) {
             $baseNodeElem = $this->parseXsdParse('//'.$this->prefix.'simpleType [@name="'.$AttrNodeType.'"]//'.$this->prefix.'restriction');
@@ -193,13 +191,14 @@ class parseXsd {
                         $attr_data = array_merge($attr_data, $this->parseElementTag($baseNode));
                     }
                 } else {
-                    return $this->BaseXsdParseData($AttrNodeType, $AttrNodeName);
+                    $attr_data =  $this->BaseXsdParseData($AttrNodeType, $AttrNodeName);
                 }
 
             } else {
 
                 foreach ($baseNodeElem as $baseNode) {
                     $attr_data = array_merge($attr_data, $this->parseSimpleTypeTag($baseNode));
+
                 }
             }
 
@@ -209,6 +208,7 @@ class parseXsd {
                 $attr_data = array_merge($attr_data, $this->parseComplexTypeTag($baseNode));
             }
         }
+
         if(!empty($attr_data)) $attr_data['name'] = $AttrNodeName;
 
         return $attr_data;
@@ -452,6 +452,7 @@ class parseXsd {
                             $nextNodeVal->parentNode->parentNode->parentNode->parentNode->localName != "sequence") {
 
                             if (!in_array($nextNodeType, $this->data_type, true)) {
+
                                 $parseResult = $this->BaseXsdParseData($nextNodeType, $nextNodeName);
                                 if (empty($parseResult)) {
                                     $parseResult = $this->LocalXsdParseData($nextNodeType, $nextNodeName);
@@ -470,10 +471,20 @@ class parseXsd {
                             }
                         } else {
 
-                            if ($nextNodeVal->getElementsByTagName("complexType")->length > 0) {
-                                $complexTypeParent = array_merge($this->parseNodeAttr($nextNodeVal), $complexTypeParent);
+                            if ($nextNodeVal->getElementsByTagName("complexType")->length > 0 ) {
 
-                                $complexTypeParent["tag_elem"][] = $this->parseElementTag($nextNodeVal);
+                                if($nextNodeVal->getElementsByTagName("element")->length > 0 ) {
+                                    $complexTypeParent["tag_elem"][] = $this->parseElementTag($nextNodeVal);
+                                } else {
+                                    if($nextNodeVal->getElementsByTagName("simpleContent")->length > 0) {
+                                        $simpleNode = $nextNodeVal->getElementsByTagName("simpleContent");
+                                        foreach ($simpleNode as $nodeData) {
+                                            $complexTypeParent = array_merge($this->parseComplexTypeTag($nodeData),$complexTypeParent);
+                                        }
+                                    }
+                                }
+
+                                $complexTypeParent = array_merge($this->parseNodeAttr($nextNodeVal), $complexTypeParent);
 
                             } else if (!empty($nextNodeType)) {
                                 $complexTypeParent["tag_elem"][] = array(
@@ -585,9 +596,10 @@ class parseXsd {
     }
 }
 
-$parseXsd = new parseXsd("Health");
+//$parseXsd = new parseXsd("FoodAndBeverages");
+//
+//$result = $parseXsd->getResult();
 
-$result = $parseXsd->getResult();
-
-echo "<pre>";
-print_r($result);
+//echo "<pre>";
+//print_r($result);
+?>
